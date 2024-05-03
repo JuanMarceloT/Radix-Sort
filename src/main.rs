@@ -1,5 +1,5 @@
 fn main() {
-    let nums: Vec<String> = vec!["aaab".to_string(), "baba".to_string(), "aaba".to_string(), "abab".to_string()];
+    let nums: Vec<String> = vec!["ab".to_string(), "aaaaba".to_string(), "acba".to_string(), "abab".to_string()];
     println!("final => {:?}", radix_sort(nums));
 }
 
@@ -20,7 +20,7 @@ fn radix(nums: Vec<String>, index: usize) -> Vec<String> {
     let mut start = 0;
     let mut temp = counting_sort(nums.clone(), index);
     for end in 1..=nums.len() {
-        if end == temp.len() || temp[start].as_bytes()[index] != temp[end].as_bytes()[index] {
+        if end == temp.len() || char_at(&temp[start], index) != char_at(&temp[end], index) {
             let sublist = sublist(&temp, start, end).to_vec();
             println!("sublist => {:?}", sublist);
             println!("{:?}", final_response);
@@ -31,11 +31,19 @@ fn radix(nums: Vec<String>, index: usize) -> Vec<String> {
     final_response
 }
 
+fn char_at(word: &String, index: usize) -> u8{
+    if word.len() > index {
+        word.as_bytes()[index] - 96
+    }else{
+        0 
+    }
+}
+
 fn counting_sort(words: Vec<String>, sort_index: usize) -> Vec<String> {
-    let greater = 26;
+    let greater = 27;
 
-    let char_to_sort: Vec<u8> = words.iter().map(|s| s.as_bytes()[sort_index] - b'a').collect();
-
+    let char_to_sort: Vec<u8> = words.iter().map(|s| char_at(s, sort_index)).collect();
+    println!("{:?}", char_to_sort);
     let mut vec = vec![0; (greater + 1) as usize];
 
     for &c in &char_to_sort {
@@ -49,11 +57,12 @@ fn counting_sort(words: Vec<String>, sort_index: usize) -> Vec<String> {
     let mut sorted_words : Vec<String> = vec![String::from(" "); words.len()];
 
     for word in words.iter().rev() {
-        let index = vec[word.as_bytes()[sort_index] as usize - b'a' as usize];
+        let index = vec[char_at(word, sort_index) as usize];
         sorted_words[index - 1] =  word.clone();
-        vec[word.as_bytes()[sort_index] as usize - b'a' as usize] -= 1;
+        vec[char_at(word, sort_index) as usize] -= 1;
     }
 
-    //println!("sorted lol => {:?}", sorted_words);
+    println!("sorted lol => {:?}", sorted_words);
     sorted_words
 }
+
