@@ -1,6 +1,8 @@
 use std::env;
 use std::path::PathBuf;
 use std::fs;
+use std::fs::File;
+use std::io::{Write};
 
 fn get_words_from_file(filename : &str) -> Vec<String> {
     let full_path = get_input_path(filename);
@@ -14,6 +16,40 @@ fn get_words_from_file(filename : &str) -> Vec<String> {
     words
 }
 
+fn sort_to_file(words: Vec<String>) -> std::io::Result<()> {
+    let path = get_input_path("Sort.txt");
+
+    let mut file = File::create(path)?;
+
+    for word in radix_sort(words) {
+        file.write_all(word.as_bytes())?;
+        file.write_all(b"\n")?;
+    }
+
+    Ok(())
+}
+
+fn write_stats_to_file(words: Vec<String>) -> std::io::Result<()> {
+    let path = get_input_path("stats.txt");
+
+    let mut file = File::create(path)?;
+
+    let mut sum = 1;
+
+    for i in 1..words.len() {
+        if words[i] == words[i - 1] {
+            sum += 1;
+        } else {
+            let output = format!("Word '{}' appears {:?} times\n", words[i - 1], sum);
+            file.write_all(output.as_bytes())?;
+            sum = 1;
+        }
+    }
+
+    Ok(())
+}
+
+
 fn main() {
     let nums: Vec<String> = vec!["ab".to_string(), "zaaaba".to_string(), "acba".to_string(), "abab".to_string()];
     println!("final => {:?}", radix_sort(nums));
@@ -21,39 +57,51 @@ fn main() {
 
     let words: Vec<String> = get_words_from_file("frankestein.txt");
 
-    println!("{:?}", radix_sort(words));
+    let sorted_words : Vec<String> = radix_sort(words.clone());
+
+
+    match write_stats_to_file(sorted_words.clone()) {
+        Ok(()) => println!("Stats file written successfully"),
+        Err(e) => eprintln!("Error writing file: {}", e),
+    }
+
+    match sort_to_file(sorted_words.clone()) {
+        Ok(()) => println!("Sort file  written successfully"),
+        Err(e) => eprintln!("Error writing file: {}", e),
+    }
+    
+    //println!("{:?}", radix_sort(words));
 }
 
 
 
 
-fn radix_sort(nums: Vec<String>) -> Vec<String> {
-    let result = radix(nums, 0);
+fn radix_sort(words: Vec<String>) -> Vec<String> {
+    let result = radix(words, 0);
     result
 }
 
-fn sublist<T>(list: &[T], start: usize, end: usize) -> &[T] {
-    &list[start..end]
+fn max_array_size(strings: &Vec<String>) -> usize {
+    strings.iter().map(|s| s.len()).max().unwrap_or(0)
 }
 
-fn radix(nums: Vec<String>, index: usize) -> Vec<String> {
-    if nums.len() <= 1 || index >= 5 {
-        return nums.to_vec();
+fn radix(words: Vec<String>, index: usize) -> Vec<String> {
+    if words.len() <= 1 || index >= max_array_size(&words) {
+        return words;
     }
     let mut final_response: Vec<String> = vec![];
+    let temp = counting_sort(words.clone(), index);
     let mut start = 0;
-    let temp = counting_sort(nums.clone(), index);
-    for end in 1..=nums.len() {
+    for end in 1..=temp.len() {
         if end == temp.len() || char_at(&temp[start], index) != char_at(&temp[end], index) {
-            let sublist = sublist(&temp, start, end).to_vec();
-            // println!("sublist => {:?}", sublist);
-            // println!("{:?}", final_response);
+            let sublist = temp[start..end].to_vec();
             final_response.extend(radix(sublist, index + 1));
             start = end;
         }
     }
     final_response
 }
+
 
 fn char_at(word: &String, index: usize) -> u8{
     if word.len() > index {
