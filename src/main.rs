@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::fs;
 use std::fs::File;
 use std::io::{Write};
+use std::collections::HashMap;
 
 fn get_words_from_file(filename : &str) -> Vec<String> {
     let full_path = get_input_path(filename);
@@ -16,8 +17,8 @@ fn get_words_from_file(filename : &str) -> Vec<String> {
     words
 }
 
-fn sort_to_file(words: Vec<String>) -> std::io::Result<()> {
-    let path = get_input_path("Sort.txt");
+fn sort_to_file(words: Vec<String>, filename : &str) -> std::io::Result<()> {
+    let path =  get_input_path(&format!("{}_sorted.txt", filename));
 
     let mut file = File::create(path)?;
 
@@ -29,51 +30,53 @@ fn sort_to_file(words: Vec<String>) -> std::io::Result<()> {
     Ok(())
 }
 
-fn write_stats_to_file(words: Vec<String>) -> std::io::Result<()> {
-    let path = get_input_path("stats.txt");
+fn write_stats_to_file(words: Vec<String>, filename : &str) -> std::io::Result<()> {
+    let path =  get_input_path(&format!("{}_counted.txt", filename));
 
     let mut file = File::create(path)?;
 
     let mut sum = 1;
 
-    for i in 1..words.len() {
-        if words[i] == words[i - 1] {
-            sum += 1;
-        } else {
-            let output = format!("Word '{}' appears {:?} times\n", words[i - 1], sum);
+    for i in 1..=words.len() {
+        if i == words.len() || words[i] != words[i - 1] {
+            let output = format!("{} {:?}\n", words[i - 1], sum);
             file.write_all(output.as_bytes())?;
             sum = 1;
+        } else {
+            sum += 1;
         }
     }
 
     Ok(())
 }
 
+fn most_frequent(words : Vec<String>, filename : &str) -> std::io::Result<()> {
+    let path =  get_input_path(&format!("{}_ranked.txt", filename));
 
-fn main() {
-    let nums: Vec<String> = vec!["ab".to_string(), "zaaaba".to_string(), "acba".to_string(), "abab".to_string()];
-    println!("final => {:?}", radix_sort(nums));
+    let mut file = File::create(path)?;
 
+    let mut word_count = HashMap::new();
+    for word in words {
+        *word_count.entry(word).or_insert(0) += 1;
+    }
+    let mut word_count_vec: Vec<(&String, &i32)> = word_count.iter().collect();
 
-    let words: Vec<String> = get_words_from_file("frankestein.txt");
+    word_count_vec.sort_by(|a, b| b.1.cmp(a.1));
 
-    let sorted_words : Vec<String> = radix_sort(words.clone());
+    let max_sort = 2000;
+    let mut max_sort_index = 0;
 
-
-    match write_stats_to_file(sorted_words.clone()) {
-        Ok(()) => println!("Stats file written successfully"),
-        Err(e) => eprintln!("Error writing file: {}", e),
+    for (word, count) in word_count_vec {
+        if max_sort_index < max_sort {
+            let output = format!("{} {:?}\n", word, count);
+            file.write_all(output.as_bytes())?;
+            max_sort_index += 1;
+        }
     }
 
-    match sort_to_file(sorted_words.clone()) {
-        Ok(()) => println!("Sort file  written successfully"),
-        Err(e) => eprintln!("Error writing file: {}", e),
-    }
-    
-    //println!("{:?}", radix_sort(words));
+
+    Ok(())
 }
-
-
 
 
 fn radix_sort(words: Vec<String>) -> Vec<String> {
@@ -157,3 +160,36 @@ fn get_input_path(filename : &str) -> PathBuf{
 
     full_path
 }
+
+
+
+fn main() {
+    // let nums: Vec<String> = vec!["ab".to_string(), "zaaaba".to_string(), "acba".to_string(), "abab".to_string()];
+    // println!("final => {:?}", radix_sort(nums));
+
+    process_and_write_files("war_and_peace");
+    process_and_write_files("frankestein");
+}
+
+
+fn process_and_write_files(filename: &str) {
+    let words: Vec<String> = get_words_from_file(&format!("{}.txt", filename));
+
+    let sorted_words: Vec<String> = radix_sort(words.clone());
+
+    match write_stats_to_file(sorted_words.clone(), filename) {
+        Ok(()) => println!("Stats file written successfully"),
+        Err(e) => eprintln!("Error writing file: {}", e),
+    }
+
+    match sort_to_file(sorted_words.clone(), filename) {
+        Ok(()) => println!("Sort file written successfully"),
+        Err(e) => eprintln!("Error writing file: {}", e),
+    }
+
+    match most_frequent(sorted_words.clone(), filename) {
+        Ok(()) => println!("Most frequent file written successfully"),
+        Err(e) => eprintln!("Error writing file: {}", e),
+    }
+}
+
